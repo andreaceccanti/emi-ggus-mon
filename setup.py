@@ -7,7 +7,7 @@ Created on 30/ago/2011
 from distutils.core import setup
 
 setup(name='emi_ggus_mon',
-      version="0.4",
+      version="0.5",
       author="Andrea Ceccanti",
       author_email="andrea.ceccanti@cnaf.infn.it",
       maintainer="Andrea Ceccanti",
