@@ -93,9 +93,9 @@ class GGUSTicket:
             item_dict = asdict(item)
             
             if not item_dict.has_key('GHI_Last_Modifier'):
-                print item
-                print item_dict
-                raise Exception, "GGUS History entry without last modifier!"
+                ## Ignore entries without the last modifier field
+                ## as are not useful for us to calculate SLA status 
+                continue
             
             if item_dict.has_key('GHI_Status'):
                 sc = StatusChange(time=item_dict['GHI_Creation_Date'], 
