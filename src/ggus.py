@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import logging
 import sys
+from emi_ggus_mon import __version__
 from emi_ggus_mon.report import print_overall_report, print_su_report, print_sla_report, print_sla_stats
 from optparse import OptionParser
 from datetime import datetime
@@ -39,8 +40,10 @@ def main():
     
     (options, args) = parser.parse_args()
     
+    print "emi-ggus-mon v. %s. " % __version__
     if len(args) == 0:
-        print "Producing EMI support status report, please be patient..."
+        print 
+        print "Producing EMI support status report, please be patient..." 
         print 
         print_overall_report(options.twiki)
     else:

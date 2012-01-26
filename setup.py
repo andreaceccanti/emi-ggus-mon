@@ -5,9 +5,13 @@ Created on 30/ago/2011
 @author: andreaceccanti
 '''
 from distutils.core import setup
+import sys
+sys.path.append("src")
+
+from emi_ggus_mon import __version__
 
 setup(name='emi_ggus_mon',
-      version="0.5",
+      version=__version__,
       author="Andrea Ceccanti",
       author_email="andrea.ceccanti@cnaf.infn.it",
       maintainer="Andrea Ceccanti",
