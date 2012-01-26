@@ -6,7 +6,7 @@ Created on 30/ago/2011
 '''
 from distutils.core import setup
 import sys
-sys.path.append("src")
+sys.path.insert(0,"src")
 
 from emi_ggus_mon import __version__
 
