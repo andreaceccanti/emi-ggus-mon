@@ -97,19 +97,19 @@ class GGUSTicket:
                 ## as are not useful for us to calculate SLA status 
                 continue
             
-            if item_dict.has_key('GHI_Status'):
-                sc = StatusChange(time=item_dict['GHI_Creation_Date'], 
-                                  status=item_dict['GHI_Status'], 
-                                  su=item_dict['GHI_Support_Unit'],
-                                  modifier=item_dict['GHI_Last_Modifier'])
+            if item_dict.has_key('GHI_Status') and len(item_dict['GHI_Status']) > 0: 
+                sc = StatusChange(time=item_dict['GHI_Creation_Date'][0], 
+                                  status=item_dict['GHI_Status'][0], 
+                                  su=item_dict['GHI_Support_Unit'][0],
+                                  modifier=item_dict['GHI_Last_Modifier'][0])
                 self.status_history.append(sc)
             
-            elif item_dict.has_key('GHI_Priority'):
+            elif item_dict.has_key('GHI_Priority') and len(item_dict['GHI_Priority']) > 0:
                 
-                pc = PriorityChange(time=item_dict['GHI_Creation_Date'],
-                                    priority=item_dict['GHI_Priority'],
+                pc = PriorityChange(time=item_dict['GHI_Creation_Date'][0],
+                                    priority=item_dict['GHI_Priority'][0],
                                     su=None,
-                                    modifier=item_dict['GHI_Last_Modifier'])
+                                    modifier=item_dict['GHI_Last_Modifier'][0])
                 self.priority_history.append(pc)
         
         self.status_history = sorted(self.status_history, key=attrgetter('time'))
@@ -142,6 +142,7 @@ class GGUSTicket:
     def get_sla_compliance_values(self):
         
         priority_when_assigned = None
+        last_status_seen = None
         retval = {}
         
         for sc in self.status_history:
@@ -150,6 +151,10 @@ class GGUSTicket:
                     priority_when_assigned = self.__priority_at_time(sc.time)
                     retval[sc.su] = SLAComplianceValue(sc.su,priority_when_assigned, sc.time, None, None, None)
                 elif sc.status == 'in progress':
+                    
+                    if last_status_seen == 'in progress':
+                        continue
+                    
                     if retval.has_key(sc.su):
                         retval[sc.su].in_progress_time = sc.time
                         retval[sc.su].out_of_assigned_time = sc.time
@@ -161,6 +166,8 @@ class GGUSTicket:
                         if retval[sc.su].assigned_time:
                             retval[sc.su].out_of_assigned_time = sc.time
                             retval[sc.su].out_of_assigned_status = sc.status
+                
+                last_status_seen = sc.status
         
         return retval
     
