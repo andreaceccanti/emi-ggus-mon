@@ -9,9 +9,6 @@ from operator import attrgetter
 from su import emi_support_units
 from ws import get_ticket, get_ticket_history, get_tickets
 
-
-
-    
 def get_ggus_tickets(query):
     
     ggus_tickets = []
@@ -41,11 +38,20 @@ def ticket_priority(ggus_ticket):
 def ticket_status(ggus_ticket):
     return ggus_ticket['GHD_Status'][0]
 
+def ticket_meta_status(ggus_ticket):
+    return ggus_ticket['GHD_Meta_Status'][0]
+
 def ticket_su(ggus_ticket):
     return ggus_ticket['GHD_Responsible_Unit'][0]
 
 def ticket_short_description(ggus_ticket):
     return ggus_ticket['GHD_Short_Description'][0]
+
+def ticket_last_update(ggus_ticket):
+    return ggus_ticket['GHD_Last_Update'][0]
+
+def ticket_date_of_change(ggus_ticket):
+    return ggus_ticket['GHD_Date_Of_Change'][0]
 
 class GGUSTicket:
     def __init__(self, ggus_ticket):
@@ -115,7 +121,8 @@ class GGUSTicket:
         self.status_history = sorted(self.status_history, key=attrgetter('time'))
         self.priority_history = sorted(self.priority_history, key=attrgetter('time'))
         self.__cleanup_priority_history()
-    
+        
+        
     def print_status_history(self):
         self.__print_history(self.status_history)
     
@@ -138,7 +145,29 @@ class GGUSTicket:
                 print c, "(%s)" % time_diff
                 last_date = c.time
                 
-    
+    def solution_time(self):
+        
+        last_solution_time = None
+        
+        for sc in self.status_history:
+            if sc.status == 'solved' or sc.status == 'unsolved':
+                last_solution_time = sc.time
+        
+        if last_solution_time:
+            return last_solution_time - self.assigned_time()
+        
+        return None
+        
+    def assigned_time(self):
+        
+        last_assigned_time = None
+        for sc in self.status_history:
+            if sc.su in emi_support_units.keys():
+                if sc.status == 'assigned':
+                    last_assigned_time = sc.time
+        
+        return last_assigned_time
+        
     def get_sla_compliance_values(self):
         
         priority_when_assigned = None

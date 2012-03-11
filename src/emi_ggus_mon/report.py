@@ -4,20 +4,21 @@ Created on 30/ago/2011
 @author: andreaceccanti
 '''
 
-from sys import stderr
 from datetime import datetime, timedelta
-from string import Template
-from suds import WebFault
-
 from emi_ggus_mon.business import BusinessCalendar
-from emi_ggus_mon.model import ticket_priority, ticket_status, ticket_su, ticket_id, \
-    ticket_short_description, get_ggus_ticket, ticket_creation_time
-
-from emi_ggus_mon.query import emi_third_level_assigned_tickets, open_tickets_for_su, \
-    emi_third_level_open_tickets, emi_third_level_open_tickets_in_period, open_tickets_for_su_in_period
-
+from emi_ggus_mon.model import ticket_priority, ticket_status, ticket_su, \
+    ticket_id, ticket_short_description, get_ggus_ticket, get_ggus_tickets
+from emi_ggus_mon.query import emi_third_level_assigned_tickets, \
+    open_tickets_for_su, emi_third_level_open_tickets, \
+    emi_third_level_open_tickets_in_period, open_tickets_for_su_in_period, \
+    emi_submitted_tickets_in_period, third_level_submitted_tickets_in_period,\
+    third_level_closed_tickets_in_period
 from emi_ggus_mon.su import emi_support_units, emi_3rd_level_su
 from emi_ggus_mon.ws import get_tickets
+from string import Template
+from suds import WebFault
+from sys import stderr
+import sys
 
 report_template = Template("""As of ${now}, there are ${numOpen} open tickets in EMI SUs, of which:
     ${numAssigned} assigned,
@@ -34,7 +35,7 @@ The tickets in assigned include:
     ${numLessUrgent} less urgent.
 """)
 
-statuses = ["assigned", "in progress", "on hold", "reopened", "waiting for reply"]
+statuses = ["assigned", "in progress", "on hold", "reopened", "waiting for reply", "solved", "unsolved", "verified"]
 priorities = ["less urgent", "urgent", "very urgent", "top priority"]
 
 sla_constraints = { "top priority": timedelta(hours=4),
@@ -42,6 +43,9 @@ sla_constraints = { "top priority": timedelta(hours=4),
                     "urgent": timedelta(days=5),
                     "less urgent": timedelta(days=15)
                     }
+
+
+date_format_str = '%d/%m/%Y'
 
 def ticket_resolution_delay(ticket):
     
@@ -247,9 +251,129 @@ def print_su_report():
                                len(priority_classification[priorities[3]]))
         
 
-def print_overall_report(twiki_format=False):
+
+def average_solution_time(tickets):
+    accum = timedelta(hours=0)
     
-    tickets = get_tickets(emi_third_level_open_tickets())
+    for t in tickets:
+        solution_time = t.solution_time()
+        if solution_time:
+            accum = accum + solution_time
+        
+    if len(tickets) > 0:
+        return accum / len(tickets)
+    
+    return accum
+    
+def print_ksa_1_2(start_date,end_date=datetime.now()):
+    print >>sys.stderr, "Producing KSA1.2 kpi csv file for period %s-%s. Please be patient..." % (start_date.strftime(date_format_str),end_date.strftime(date_format_str))
+    
+    csv_header = "su,%s" % ','.join(priorities)
+    
+    tickets = get_ggus_tickets(third_level_closed_tickets_in_period(start_date,end_date))
+    
+    su_classification = classify_su(tickets)
+    
+    sus = sorted(su_classification.keys(), key=str.lower)
+    print csv_header
+    
+    for su in sus:
+        prios = classify_priority(su_classification[su])
+        print "%s,%s,%s,%s,%s" % (su,
+                                  average_solution_time(prios[priorities[0]]),
+                                  average_solution_time(prios[priorities[1]]),
+                                  average_solution_time(prios[priorities[2]]),
+                                  average_solution_time(prios[priorities[3]]))
+    
+def print_ksa1_1(start_date,end_date=datetime.now()):
+    print >>sys.stderr, "Producing KSA1.1 kpi csv file for period %s-%s. Please be patient..." % (start_date.strftime(date_format_str),end_date.strftime(date_format_str))
+    
+    csv_header = "su,%s" % ','.join(priorities)
+    
+    tickets = get_tickets(third_level_submitted_tickets_in_period(start_date,end_date))
+    
+    su_classification = classify_su(tickets)
+    
+    sus = sorted(su_classification.keys(), key=str.lower)
+    print csv_header
+    for su in sus:
+        prios = classify_priority(su_classification[su])
+        print "%s,%d,%d,%d,%d" % (su, 
+                                  len(prios[priorities[0]]),
+                                  len(prios[priorities[1]]),
+                                  len(prios[priorities[2]]),
+                                  len(prios[priorities[3]]))
+    
+def print_submitted_tickets_report(start_date, end_date=datetime.now()):
+    
+    print "Producing EMI support summary report for period %s-%s. Please be patient..." % (start_date.strftime(date_format_str),end_date.strftime(date_format_str))
+    print
+    tickets = get_tickets(third_level_submitted_tickets_in_period(start_date,end_date))
+    
+    status_classification = classify_status(tickets)
+    priority_classification = classify_priority(tickets)
+    su_classification = classify_su(tickets)
+    
+    report_template = Template("""${numTickets} tickets were submitted in period ${startDate}-${endDate}. 
+The status for these tickets is currently:
+        ${numAssigned} assigned,
+        ${numInProgress} in progress,
+        ${numOnHold} on hold,
+        ${numReopened} reopened,
+        ${numWaitingForReply} waiting for reply,
+        ${numSolved} closed as solved,
+        ${numUnsolved} closed as unsolved,
+        ${numVerified} verified.
+        
+The current priority classification of the above tickets is:
+        
+        ${numTopPriority} top priority,
+        ${numVeryUrgent} very urgent,
+        ${numUrgent} urgent,
+        ${numLessUrgent} less urgent.""")
+        
+    keys = {'numTickets': len(tickets),
+            'startDate': start_date.strftime(date_format_str),
+            'endDate': end_date.strftime(date_format_str),
+            'numAssigned': len(status_classification['assigned']),
+            'numInProgress': len(status_classification['in progress']),
+            'numOnHold': len(status_classification['on hold']),
+            'numReopened': len(status_classification['reopened']),
+            'numSolved': len(status_classification['solved']),
+            'numUnsolved': len(status_classification['unsolved']),
+            'numVerified': len(status_classification['verified']),
+            'numWaitingForReply': len(status_classification['waiting for reply']),
+            'numTopPriority': len(priority_classification['top priority']),
+            'numVeryUrgent': len(priority_classification['very urgent']),
+            'numUrgent': len(priority_classification['urgent']),
+            'numLessUrgent': len(priority_classification['less urgent'])
+            }
+        
+        
+    print report_template.safe_substitute(keys)
+    
+    sus = sorted(su_classification.keys(), key=str.lower)
+    print
+    print "The above tickets are currently assigned to the following SUs:"
+    for su in sus:
+        print "\n%s: %d" % (su, len(su_classification[su]))
+        for t in su_classification[su]:
+            print "\thttps://ggus.eu/tech/ticket_show.php?ticket=%s (%s) %s " % (ticket_id(t), ticket_priority(t), ticket_status(t))
+
+def classify_su(tickets):
+    
+    su_classification = {}
+    
+    for su in emi_3rd_level_su.keys():
+        su_classification[su] = []
+    
+    for t in tickets:
+        su = ticket_su(t)
+        su_classification[su].append(t)
+        
+    return su_classification
+    
+def classify_status(tickets):
     
     status_classification = {}
     
@@ -260,14 +384,28 @@ def print_overall_report(twiki_format=False):
         status = ticket_status(t)
         status_classification[status].append(t)
     
-    assigned_priority_classification = {}
+    return status_classification
+
+
+def classify_priority(tickets):
+    
+    priority_classification = {}
     
     for i in priorities:
-        assigned_priority_classification[i] = []
+        priority_classification[i] = []
     
-    for t in status_classification['assigned']:
+    for t in tickets:
         prio = ticket_priority(t)
-        assigned_priority_classification[prio].append(t)
+        priority_classification[prio].append(t)
+    
+    return priority_classification
+    
+def print_assigned_ticket_status_report(twiki_format=False):
+    
+    tickets = get_tickets(emi_third_level_open_tickets())
+    
+    status_classification = classify_status(tickets)
+    assigned_priority_classification = classify_priority(status_classification['assigned'])
     
     keys = {'now': datetime.now(),
             'numOpen': len(tickets),
@@ -281,6 +419,7 @@ def print_overall_report(twiki_format=False):
             'numUrgent': len(assigned_priority_classification['urgent']),
             'numLessUrgent': len(assigned_priority_classification['less urgent'])
             }
+    
     now = datetime.now()
     
     if twiki_format:

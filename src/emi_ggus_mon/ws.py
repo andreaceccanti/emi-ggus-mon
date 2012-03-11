@@ -35,6 +35,21 @@ def get_ticket(ticket_id):
     ggus_client = init_ggus_client(help_desk_url)
     return ggus_client.service.TicketGet(ticket_id)
 
+def get_tickets2(query1, query2):
+    retval = []
+    ggus_client = init_ggus_client(help_desk_url)
+    
+    list_result = ggus_client.service.TicketGetList(query1)
+    
+    for t in list_result:
+        retval.append(ggus_client.service.TicketGet(t['GHD_Request-ID']))
+    list_result = ggus_client.service.TicketGetList(query2)
+    
+    for t in list_result:
+        retval.append(ggus_client.service.TicketGet(t['GHD_Request-ID']))
+    
+    return retval
+    
 def get_tickets(query):
     retval = []
     ggus_client = init_ggus_client(help_desk_url)
