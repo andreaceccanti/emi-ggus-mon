@@ -7,7 +7,8 @@ Created on 30/ago/2011
 from datetime import datetime, timedelta
 from emi_ggus_mon.business import BusinessCalendar
 from emi_ggus_mon.model import ticket_priority, ticket_status, ticket_su, \
-    ticket_id, ticket_short_description, get_ggus_ticket, get_ggus_tickets
+    ticket_id, ticket_short_description, get_ggus_ticket, get_ggus_tickets, \
+    ticket_url
 from emi_ggus_mon.query import emi_third_level_assigned_tickets, \
     open_tickets_for_su, emi_third_level_open_tickets, \
     emi_third_level_open_tickets_in_period, open_tickets_for_su_in_period, \
@@ -19,6 +20,7 @@ from string import Template
 from suds import WebFault
 from sys import stderr
 import sys
+from warnings import catch_warnings
 
 report_template = Template("""As of ${now}, there are ${numOpen} open tickets in EMI SUs, of which:
     ${numAssigned} assigned,
@@ -46,6 +48,9 @@ sla_constraints = { "top priority": timedelta(hours=4),
 
 
 date_format_str = '%d/%m/%Y'
+
+def format_date(d):
+    return d.strftime(date_format_str)
 
 def ticket_resolution_delay(ticket):
     
@@ -261,16 +266,37 @@ def average_solution_time(tickets):
             accum = accum + solution_time
         
     if len(tickets) > 0:
-        return accum / len(tickets)
+        # print >>sys.stderr, "accum:%s len: %d" % (accum, len(tickets))
+        return (accum / len(tickets))
     
     return accum
+
+def median_solution_time(tickets):
+    if len(tickets) > 0:
+        solution_times = sorted([t.solution_time() for t in tickets])
+        
+        if len(tickets) % 2 == 0:
+            ## Even number of items, the median is the arithmetic mean of the two middlemost terms
+            median_index = (len(solution_times)+1)/2
+            return (solution_times[median_index]+solution_times[median_index+1])/2
+        else:
+            ## Odd number of items, the mean is the (n+1)/2 th item
+            median_index = (len(solution_times)+1)/2
+            return solution_times[median_index]
+   
+    
     
 def print_ksa_1_2(start_date,end_date=datetime.now()):
-    print >>sys.stderr, "Producing KSA1.2 kpi csv file for period %s-%s. Please be patient..." % (start_date.strftime(date_format_str),end_date.strftime(date_format_str))
+    print >>sys.stderr, "Producing KSA1.2 kpi csv file for period %s-%s. Please be patient..." % (format_date(start_date),format_date(end_date))
     
     csv_header = "su,%s" % ','.join(priorities)
+
+    try:    
+        tickets = get_tickets(third_level_closed_tickets_in_period(start_date,end_date))
     
-    tickets = get_ggus_tickets(third_level_closed_tickets_in_period(start_date,end_date))
+    except WebFault:
+        print >> stderr, "No closed tickets found in period %s-%s" % (format_date(start_date), format_date(end_date))
+        return
     
     su_classification = classify_su(tickets)
     
@@ -279,11 +305,11 @@ def print_ksa_1_2(start_date,end_date=datetime.now()):
     
     for su in sus:
         prios = classify_priority(su_classification[su])
-        print "%s,%s,%s,%s,%s" % (su,
-                                  average_solution_time(prios[priorities[0]]),
-                                  average_solution_time(prios[priorities[1]]),
-                                  average_solution_time(prios[priorities[2]]),
-                                  average_solution_time(prios[priorities[3]]))
+        print "%s,%d,%d,%d,%d" % (su,
+                                  average_solution_time([get_ggus_ticket(ticket_id(t)) for t in prios[priorities[0]]]).days,
+                                  average_solution_time([get_ggus_ticket(ticket_id(t)) for t in prios[priorities[1]]]).days,
+                                  average_solution_time([get_ggus_ticket(ticket_id(t)) for t in prios[priorities[2]]]).days,
+                                  average_solution_time([get_ggus_ticket(ticket_id(t)) for t in prios[priorities[3]]]).days)
     
 def print_ksa1_1(start_date,end_date=datetime.now()):
     print >>sys.stderr, "Producing KSA1.1 kpi csv file for period %s-%s. Please be patient..." % (start_date.strftime(date_format_str),end_date.strftime(date_format_str))

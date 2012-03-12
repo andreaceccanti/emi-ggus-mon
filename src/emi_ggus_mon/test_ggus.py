@@ -56,9 +56,10 @@ class Test(unittest.TestCase):
         print query_str
         tickets = get_tickets(query_str)
         for t in tickets:
+            print t
             ggus_t = get_ggus_ticket(ticket_id(t))
             
-            print ticket_id(t)+"(%s) %s %s %s %s" % (ticket_su(t),ticket_meta_status(t),ticket_last_update(t),ggus_t.assigned_time(), ggus_t.solution_time())
+            print ticket_id(t)+"(%s) %s %s %s %s" % (ticket_su(t),ticket_meta_status(t),ticket_last_update(t),ggus_t.assigned_time(), ggus_t.solution_time().seconds / 3600 )
         
         
         

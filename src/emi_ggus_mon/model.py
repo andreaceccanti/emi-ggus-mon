@@ -3,11 +3,13 @@ Created on 17/ago/2011
 
 @author: andreaceccanti
 '''
-from suds.sudsobject import asdict
+from datetime import datetime
 from operator import attrgetter
-
 from su import emi_support_units
+from suds.sudsobject import asdict
 from ws import get_ticket, get_ticket_history, get_tickets
+import sys
+
 
 def get_ggus_tickets(query):
     
@@ -26,8 +28,18 @@ def get_ggus_ticket(ticket_id):
     t.create_history(history)
     return t
 
+def safe_get_item(l, index):
+    if l:
+        if index < len(l):
+            return l[index]
+    
+    return None
+
 def ticket_creation_time(ggus_ticket):
-    return ggus_ticket['GHD_Date_Time_Of_Problem'][0]
+    return safe_get_item(ggus_ticket['GHD_Date_Time_Of_Problem'],0)
+
+def ticket_url(ggus_ticket):
+    return "https://ggus.eu/ws/ticket_info.php?ticket=%s" % ticket_id(ggus_ticket)
 
 def ticket_id(ggus_ticket):
     return ggus_ticket['GHD_Request-ID'][0]
@@ -52,6 +64,9 @@ def ticket_last_update(ggus_ticket):
 
 def ticket_date_of_change(ggus_ticket):
     return ggus_ticket['GHD_Date_Of_Change'][0]
+
+def ticket_internal_creation_time(ggus_ticket):
+    return ggus_ticket['GHD_Date_Of_Creation'][0]
 
 class GGUSTicket:
     def __init__(self, ggus_ticket):
@@ -115,7 +130,7 @@ class GGUSTicket:
                 pc = PriorityChange(time=item_dict['GHI_Creation_Date'][0],
                                     priority=item_dict['GHI_Priority'][0],
                                     su=None,
-                                    modifier=item_dict['GHI_Last_Modifier'][0])
+                                    modifier=safe_get_item(item_dict['GHI_Last_Modifier'],0))
                 self.priority_history.append(pc)
         
         self.status_history = sorted(self.status_history, key=attrgetter('time'))
@@ -144,8 +159,9 @@ class GGUSTicket:
                 time_diff = c.time - last_date
                 print c, "(%s)" % time_diff
                 last_date = c.time
-                
+    
     def solution_time(self):
+        
         
         last_solution_time = None
         
@@ -153,10 +169,26 @@ class GGUSTicket:
             if sc.status == 'solved' or sc.status == 'unsolved':
                 last_solution_time = sc.time
         
+         
         if last_solution_time:
-            return last_solution_time - self.assigned_time()
+            time_to_solution = last_solution_time - self.assigned_time()
+            
+#            print >>sys.stderr, "(%s) %s - %s [assigned: %s,lst: %s,tts: %s]" % (ticket_su(self.ticket),
+#                                                                                 ticket_url(self.ticket),
+#                                                                                 ticket_priority(self.ticket),
+#                                                                                 self.assigned_time(),
+#                                                                                 last_solution_time,
+#                                                                                 time_to_solution)
+            return time_to_solution 
         
         return None
+    
+    def new_time(self):
+        for sc in self.status_history:
+            if sc.status == 'new':
+                return sc.time
+        
+        return ticket_internal_creation_time(self.ticket)
         
     def assigned_time(self):
         

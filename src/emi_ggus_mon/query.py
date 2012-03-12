@@ -62,6 +62,11 @@ def third_level_submitted_tickets_in_period(start_date,end_date):
     emi_third_level_su_str= "".join(["'GHD_Responsible Unit' = \"%s\" OR " % i for i in emi_3rd_level_su])[0:-3] + ")"
     return query_str+ emi_third_level_su_str
 
+def third_level_closed_tickets():
+    query_str = "'GHD_Meta Status'=\"Closed\" AND ("
+    emi_third_level_su_str= "".join(["'GHD_Responsible Unit' = \"%s\" OR " % i for i in emi_3rd_level_su])[0:-3] + ")"
+    return query_str+ emi_third_level_su_str
+
 def third_level_closed_tickets_in_period(start_date,end_date):
     #query_str = "'GHD_Meta Status'=\"Closed\" AND 'GHD_Last_Update' >= \"%s\" AND 'GHD_Last_Update' < \"%s\" AND (" % (start_date, end_date)
     query_str = "'GHD_Meta Status'=\"Closed\" AND 'GHD_Last Update' >= \"%s\" AND 'GHD_Last Update' < \"%s\" AND (" % (start_date.strftime("%s"),end_date.strftime("%s")) 
