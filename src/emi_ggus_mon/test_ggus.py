@@ -52,14 +52,15 @@ class Test(unittest.TestCase):
         start_date = date(2011,11,1)
         end_date = date(2011,11,7)
         
-        query_str = third_level_closed_tickets_in_period(start_date,end_date)
+        query_str = emi_submitted_tickets_in_period(start_date, end_date)
+        
         print query_str
         tickets = get_tickets(query_str)
-        for t in tickets:
-            print t
-            ggus_t = get_ggus_ticket(ticket_id(t))
-            
-            print ticket_id(t)+"(%s) %s %s %s %s" % (ticket_su(t),ticket_meta_status(t),ticket_last_update(t),ggus_t.assigned_time(), ggus_t.solution_time().seconds / 3600 )
+#        for t in tickets:
+#            print t
+#            ggus_t = get_ggus_ticket(ticket_id(t))
+#            
+#            print ticket_id(t)+"(%s) %s %s %s %s" % (ticket_su(t),ticket_meta_status(t),ticket_last_update(t),ggus_t.assigned_time(), ggus_t.solution_time().seconds / 3600 )
         
         
         

@@ -12,7 +12,7 @@ from emi_ggus_mon.model import ticket_priority, ticket_status, ticket_su, \
 from emi_ggus_mon.query import emi_third_level_assigned_tickets, \
     open_tickets_for_su, emi_third_level_open_tickets, \
     emi_third_level_open_tickets_in_period, open_tickets_for_su_in_period, \
-    emi_submitted_tickets_in_period, third_level_submitted_tickets_in_period,\
+    emi_submitted_tickets_in_period, third_level_submitted_tickets_in_period, \
     third_level_closed_tickets_in_period
 from emi_ggus_mon.su import emi_support_units, emi_3rd_level_su
 from emi_ggus_mon.ws import get_tickets
@@ -20,7 +20,7 @@ from string import Template
 from suds import WebFault
 from sys import stderr
 import sys
-from warnings import catch_warnings
+
 
 report_template = Template("""As of ${now}, there are ${numOpen} open tickets in EMI SUs, of which:
     ${numAssigned} assigned,
@@ -311,14 +311,14 @@ def print_ksa_1_2(start_date,end_date=datetime.now()):
                                   average_solution_time([get_ggus_ticket(ticket_id(t)) for t in prios[priorities[2]]]).days,
                                   average_solution_time([get_ggus_ticket(ticket_id(t)) for t in prios[priorities[3]]]).days)
     
-def print_ksa1_1(start_date,end_date=datetime.now()):
+def print_ksa_1_1(start_date,end_date=datetime.now()):
     print >>sys.stderr, "Producing KSA1.1 kpi csv file for period %s-%s. Please be patient..." % (start_date.strftime(date_format_str),end_date.strftime(date_format_str))
     
     csv_header = "su,%s" % ','.join(priorities)
     
-    tickets = get_tickets(third_level_submitted_tickets_in_period(start_date,end_date))
+    tickets = get_tickets(emi_submitted_tickets_in_period(start_date, end_date))
     
-    su_classification = classify_su(tickets)
+    su_classification = classify_su(tickets, sus=emi_support_units.keys())
     
     sus = sorted(su_classification.keys(), key=str.lower)
     print csv_header
@@ -334,11 +334,11 @@ def print_submitted_tickets_report(start_date, end_date=datetime.now()):
     
     print "Producing EMI support summary report for period %s-%s. Please be patient..." % (start_date.strftime(date_format_str),end_date.strftime(date_format_str))
     print
-    tickets = get_tickets(third_level_submitted_tickets_in_period(start_date,end_date))
+    tickets = get_tickets(emi_submitted_tickets_in_period(start_date,end_date))
     
     status_classification = classify_status(tickets)
     priority_classification = classify_priority(tickets)
-    su_classification = classify_su(tickets)
+    su_classification = classify_su(tickets, sus=emi_support_units.keys())
     
     report_template = Template("""${numTickets} tickets were submitted in period ${startDate}-${endDate}. 
 The status for these tickets is currently:
@@ -386,11 +386,11 @@ The current priority classification of the above tickets is:
         for t in su_classification[su]:
             print "\thttps://ggus.eu/tech/ticket_show.php?ticket=%s (%s) %s " % (ticket_id(t), ticket_priority(t), ticket_status(t))
 
-def classify_su(tickets):
+def classify_su(tickets, sus=emi_3rd_level_su.keys()):
     
     su_classification = {}
     
-    for su in emi_3rd_level_su.keys():
+    for su in sus:
         su_classification[su] = []
     
     for t in tickets:

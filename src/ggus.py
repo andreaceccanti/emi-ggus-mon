@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 from datetime import datetime
 from emi_ggus_mon import __version__
-from emi_ggus_mon.report import print_assigned_ticket_status_report, print_su_report, \
-    print_sla_report, print_sla_stats, print_submitted_tickets_report,\
-    print_ksa1_1, print_ksa_1_2
+from emi_ggus_mon.report import print_assigned_ticket_status_report, \
+    print_su_report, print_sla_report, print_sla_stats, \
+    print_submitted_tickets_report, print_ksa_1_2, print_ksa_1_1
 from optparse import OptionParser
 from string import split
 import logging
@@ -92,7 +92,7 @@ def main():
             if options.period:
                 (start_date,end_date) = parse_period(options.period)
             
-            print_ksa1_1(start_date,end_date)
+            print_ksa_1_1(start_date,end_date)
             
         elif cmd == 'ksa1.2':
             start_date = SLA_START_DATE

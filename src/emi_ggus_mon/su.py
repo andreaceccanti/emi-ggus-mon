@@ -34,7 +34,7 @@ class SupportUnit(object):
 emi_1st_level_su = { 
                      "EMI QA" : SupportUnit("EMI QA"),
                      "EMI Release Management" : SupportUnit("EMI Release Management"),
-                     "EMI Testbed" : SupportUnit("EMI Testbed")
+                     "EMI Testbeds" : SupportUnit("EMI Testbeds")
                     }
 
 emi_3rd_level_su = {
