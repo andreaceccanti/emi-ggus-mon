@@ -36,37 +36,37 @@ def safe_get_item(l, index):
     return None
 
 def ticket_creation_time(ggus_ticket):
-    return safe_get_item(ggus_ticket['GHD_Date_Time_Of_Problem'],0)
+    return ggus_ticket['GHD_Date_Time_Of_Problem']
 
 def ticket_url(ggus_ticket):
     return "https://ggus.eu/ws/ticket_info.php?ticket=%s" % ticket_id(ggus_ticket)
 
 def ticket_id(ggus_ticket):
-    return ggus_ticket['GHD_Request-ID'][0]
+    return ggus_ticket['GHD_Request-ID']
 
 def ticket_priority(ggus_ticket):
-    return ggus_ticket['GHD_Priority'][0]
+    return ggus_ticket['GHD_Priority']
 
 def ticket_status(ggus_ticket):
-    return ggus_ticket['GHD_Status'][0]
+    return ggus_ticket['GHD_Status']
 
 def ticket_meta_status(ggus_ticket):
-    return ggus_ticket['GHD_Meta_Status'][0]
+    return ggus_ticket['GHD_Meta_Status']
 
 def ticket_su(ggus_ticket):
-    return ggus_ticket['GHD_Responsible_Unit'][0]
+    return ggus_ticket['GHD_Responsible_Unit']
 
 def ticket_short_description(ggus_ticket):
-    return ggus_ticket['GHD_Short_Description'][0]
+    return ggus_ticket['GHD_Short_Description']
 
 def ticket_last_update(ggus_ticket):
-    return ggus_ticket['GHD_Last_Update'][0]
+    return ggus_ticket['GHD_Last_Update']
 
 def ticket_date_of_change(ggus_ticket):
-    return ggus_ticket['GHD_Date_Of_Change'][0]
+    return ggus_ticket['GHD_Date_Of_Change']
 
 def ticket_internal_creation_time(ggus_ticket):
-    return ggus_ticket['GHD_Date_Of_Creation'][0]
+    return ggus_ticket['GHD_Date_Of_Creation']
 
 class GGUSTicket:
     def __init__(self, ggus_ticket):
@@ -118,19 +118,19 @@ class GGUSTicket:
                 ## as are not useful for us to calculate SLA status 
                 continue
             
-            if item_dict.has_key('GHI_Status') and len(item_dict['GHI_Status']) > 0: 
-                sc = StatusChange(time=item_dict['GHI_Creation_Date'][0], 
-                                  status=item_dict['GHI_Status'][0], 
-                                  su=item_dict['GHI_Support_Unit'][0],
-                                  modifier=item_dict['GHI_Last_Modifier'][0])
+            if item_dict.has_key('GHI_Status') and item_dict['GHI_Status'] != None: 
+                sc = StatusChange(time=item_dict['GHI_Creation_Date'], 
+                                  status=item_dict['GHI_Status'], 
+                                  su=item_dict['GHI_Support_Unit'],
+                                  modifier=item_dict['GHI_Last_Modifier'])
                 self.status_history.append(sc)
             
             elif item_dict.has_key('GHI_Priority') and len(item_dict['GHI_Priority']) > 0:
                 
-                pc = PriorityChange(time=item_dict['GHI_Creation_Date'][0],
-                                    priority=item_dict['GHI_Priority'][0],
+                pc = PriorityChange(time=item_dict['GHI_Creation_Date'],
+                                    priority=item_dict['GHI_Priority'],
                                     su=None,
-                                    modifier=safe_get_item(item_dict['GHI_Last_Modifier'],0))
+                                    modifier=item_dict['GHI_Last_Modifier'])
                 self.priority_history.append(pc)
         
         self.status_history = sorted(self.status_history, key=attrgetter('time'))
