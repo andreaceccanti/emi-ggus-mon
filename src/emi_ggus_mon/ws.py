@@ -61,5 +61,5 @@ def get_tickets(query):
 
 def get_ticket_history(ggus_ticket):
     history_client = init_ggus_client(history_url)
-    return history_client.service.OpGetTicketHist(None,ggus_ticket)
+    return history_client.service.OpGetTicketHist(ggus_ticket)
 
