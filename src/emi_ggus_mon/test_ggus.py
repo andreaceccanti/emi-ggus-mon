@@ -8,7 +8,8 @@ from emi_ggus_mon.model import ticket_id, ticket_meta_status, ticket_last_update
     ticket_date_of_change, get_ggus_tickets, ticket_status
 from emi_ggus_mon.query import \
     emi_submitted_tickets_in_period_for_unassigned_sus, \
-    third_level_submitted_tickets_in_period, third_level_closed_tickets_in_period
+    third_level_submitted_tickets_in_period, third_level_closed_tickets_in_period,\
+    emi_third_level_open_tickets, emi_third_level_closed_tickets
 from emi_ggus_mon.ws import get_tickets, init_ggus_client, history_url,\
     help_desk_url
 from model import get_ggus_ticket, ticket_su
@@ -33,22 +34,39 @@ class Test(unittest.TestCase):
         #logging.getLogger('suds.xsd.schema').setLevel(logging.DEBUG)
         #logging.getLogger('suds.wsdl').setLevel(logging.DEBUG)
         
-        ticket_no = "78435"
-        ticket = get_ticket(ticket_no)
-        print ticket
-        
-        
-        ticket_history = get_ticket_history(ticket_no)
-        print ticket_history
-        
-        g = get_ggus_ticket(ticket_no)
-        g.print_status_history()
+#        ticket_no = "78435"
+#        ticket = get_ticket(ticket_no)
+#        print ticket
+#        
+#        
+#        ticket_history = get_ticket_history(ticket_no)
+#        print ticket_history
+#        
+#        g = get_ggus_ticket(ticket_no)
+#        g.print_status_history()
+#
+#
+#        su = ticket_su(ticket)
+#        print su
+#        sla_comp_values = g.get_sla_compliance_values()
+#        print sla_comp_values
 
-
-        su = ticket_su(ticket)
-        print su
-        sla_comp_values = g.get_sla_compliance_values()
-        print sla_comp_values            
+    def testThirdLevelQuery(self):
+        
+        query = emi_third_level_open_tickets()
+        
+        ggus_client = init_ggus_client(help_desk_url)
+        
+        print ggus_client
+        list_result = ggus_client.service.TicketGetList(query, startRecord="0", maxLimit="-1")
+        print len(list_result)
+        
+     
+        
+        
+        
+        
+        
         
 
 if __name__ == "__main__":

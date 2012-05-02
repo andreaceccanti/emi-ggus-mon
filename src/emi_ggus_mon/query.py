@@ -17,6 +17,11 @@ def build_third_level_query_str(str):
 def emi_open_tickets():
     return "'GHD_EMI Ticket'=\"Yes\" AND 'GHD_Meta Status'=\"Open\" AND 'GHD_Responsible Unit'!=\"%s\"" % "EGI Software Provisioning"
 
+def emi_third_level_closed_tickets():
+    query_str = "'GHD_Meta Status'=\"Closed\" AND ("
+    emi_third_level_su_str= "".join(["'GHD_Responsible Unit' = \"%s\" OR " % i for i in emi_3rd_level_su])[0:-3] + ")"
+    return query_str+ emi_third_level_su_str
+
 def emi_third_level_open_tickets():
     query_str = "'GHD_Meta Status'=\"Open\" AND ("
     emi_third_level_su_str= "".join(["'GHD_Responsible Unit' = \"%s\" OR " % i for i in emi_3rd_level_su])[0:-3] + ")"
