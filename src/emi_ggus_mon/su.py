@@ -51,6 +51,8 @@ emi_3rd_level_su = {
                      "EMIR" : SupportUnit("EMIR"),
                      "EMI UI": SupportUnit("EMI UI"),
                      "EMI WN": SupportUnit("EMI WN"),
+                     "EMI Common": SupportUnit("EMI Common"),
+                     "EMI Common Data Library": SupportUnit("EMI Common Data Library"),
                      "FTS Development" : SupportUnit("FTS Development"),
                      "gLite Hydra" : SupportUnit("gLite Hydra"),
                      "gLite Identity Security" : SupportUnit("gLite Identity Security"),
