@@ -5,11 +5,11 @@ Created on 30/set/2011
 '''
 from datetime import date, datetime
 from emi_ggus_mon.model import ticket_id, ticket_meta_status, ticket_last_update, \
-    ticket_date_of_change, get_ggus_tickets, ticket_status
+    ticket_date_of_change, get_ggus_tickets, ticket_status, ticket_eta
 from emi_ggus_mon.query import \
     emi_submitted_tickets_in_period_for_unassigned_sus, \
     third_level_submitted_tickets_in_period, third_level_closed_tickets_in_period,\
-    emi_third_level_open_tickets, emi_third_level_closed_tickets
+    emi_third_level_open_tickets, emi_third_level_closed_tickets, open_very_urgent_and_top_priority_tickets
 from emi_ggus_mon.ws import get_tickets, init_ggus_client, history_url,\
     help_desk_url
 from model import get_ggus_ticket, ticket_su
@@ -53,13 +53,17 @@ class Test(unittest.TestCase):
 
     def testThirdLevelQuery(self):
         
-        query = emi_third_level_open_tickets()
-        
+        query = open_very_urgent_and_top_priority_tickets()
+        print query
         ggus_client = init_ggus_client(help_desk_url)
         
-        print ggus_client
-        list_result = ggus_client.service.TicketGetList(query, startRecord="0", maxLimit="-1")
-        print len(list_result)
+        tickets = get_tickets(query)
+        
+        for t in filter(lambda t: ticket_eta(t) is None, tickets):
+            print t
+            print ticket_id(t), ticket_eta(t)
+        
+        print len(tickets)
         
      
         

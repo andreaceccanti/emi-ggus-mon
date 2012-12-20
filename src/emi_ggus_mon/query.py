@@ -57,8 +57,20 @@ def emi_open_tickets_for_priority(priority):
 def emi_third_level_assigned_tickets():
     return build_third_level_query_str("'GHD_EMI Ticket'=\"Yes\" AND 'GHD_Meta Status'=\"Open\" AND 'GHD_Status'=\"assigned\"")
 
+def open_on_hold_tickets():
+    query_str = "'GHD_Meta Status'=\"Open\" AND ("
+    su_str= "".join(["'GHD_Responsible Unit' = \"%s\" OR " % i for i in emi_support_units])[0:-3] + ") "
+    on_hold_str = "AND 'GHD_Status' =\"on hold\""
+    return query_str+su_str+on_hold_str
+
+def open_very_urgent_and_top_priority_tickets():
+    query_str = "'GHD_Meta Status'=\"Open\" AND ("
+    su_str= "".join(["'GHD_Responsible Unit' = \"%s\" OR " % i for i in emi_support_units])[0:-3] + ") "
+    priority_str = "AND (('GHD_Priority' =\"very urgent\" or 'GHD_Priority'=\"top priority\"))" 
+    return query_str+su_str+priority_str
+
 def emi_submitted_tickets_in_period(start_date,end_date):
-    query_str = "'GHD_Date/Time Of Problem' >= \"%s\" AND 'GHD_Date/Time Of Problem' <= \"%s\" AND (" % (start_date, end_date)
+    query_str = "'GHD_Date/Time Of Problem' >= \"%s\" AND 'GHD_Date/Time Of Problem' <= \"%s\" AND 'GHD_Ticket Category' != \"Test\" AND 'GHD_Ticket Category' != \"Spam\" AND (" % (start_date, end_date)
     su_str = "".join(["'GHD_Responsible Unit' = \"%s\" OR " % i for i in emi_support_units])[0:-3] + ")"
     return query_str+su_str
 
@@ -71,7 +83,6 @@ def third_level_submitted_tickets_in_period(start_date,end_date):
     query_str = "'GHD_Date/Time Of Problem' >= \"%s\" AND 'GHD_Date/Time Of Problem' <= \"%s\" AND (" % (start_date, end_date)
     emi_third_level_su_str= "".join(["'GHD_Responsible Unit' = \"%s\" OR " % i for i in emi_3rd_level_su])[0:-3] + ")"
     return query_str+ emi_third_level_su_str
-
 
 def third_level_closed_tickets():
     query_str = "'GHD_Meta Status'=\"Closed\" AND ("
@@ -88,6 +99,5 @@ def emi_closed_tickets_in_period(start_date,end_date):
     query_str = "'GHD_Meta Status'=\"Closed\" AND 'GHD_Last Update' >= \"%s\" AND 'GHD_Last Update' <= \"%s\" AND (" % (start_date.strftime("%s"),end_date.strftime("%s"))
     su_str = "".join(["'GHD_Responsible Unit' = \"%s\" OR " % i for i in emi_support_units])[0:-3] + ")"
     return query_str+su_str
-    
     
     

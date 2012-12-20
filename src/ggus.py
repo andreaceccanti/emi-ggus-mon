@@ -3,7 +3,8 @@ from datetime import datetime
 from emi_ggus_mon import __version__
 from emi_ggus_mon.report import print_assigned_ticket_status_report, \
     print_su_report, print_sla_report, print_sla_stats, \
-    print_submitted_tickets_report, print_ksa_1_2, print_ksa_1_1
+    print_submitted_tickets_report, print_ksa_1_2, print_ksa_1_1,\
+    print_eta_status_report, print_on_hold_report
 from optparse import OptionParser
 from string import split
 import logging
@@ -50,8 +51,14 @@ def main():
         print_assigned_ticket_status_report(options.twiki)
     else:
         cmd = args[0]
-        
-        if cmd == 'su':
+        if cmd == "eta":
+            print_eta_status_report()
+          
+        elif cmd == "on-hold":
+            
+            print_on_hold_report()
+              
+        elif cmd == 'su':
             print_su_report()
         
         elif cmd == 'sla':    

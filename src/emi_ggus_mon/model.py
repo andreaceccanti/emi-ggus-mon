@@ -68,6 +68,15 @@ def ticket_date_of_change(ggus_ticket):
 def ticket_internal_creation_time(ggus_ticket):
     return ggus_ticket['GHD_Date_Of_Creation']
 
+def ticket_category(ggus_ticket):
+    return ggus_ticket['GHD_Category']
+
+def ticket_eta(ggus_ticket):
+    return ggus_ticket['GHD_ETA']
+
+def ticket_related_issue(ggus_ticket):
+    return ggus_ticket['GHD_Related_Issue']
+
 class GGUSTicket:
     def __init__(self, ggus_ticket):
         self.ticket = ggus_ticket

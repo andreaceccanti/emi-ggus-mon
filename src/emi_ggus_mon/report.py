@@ -8,12 +8,13 @@ from datetime import datetime, timedelta
 from emi_ggus_mon.business import BusinessCalendar
 from emi_ggus_mon.model import ticket_priority, ticket_status, ticket_su, \
     ticket_id, ticket_short_description, get_ggus_ticket, get_ggus_tickets, \
-    ticket_url
+    ticket_url, ticket_eta, ticket_creation_time, ticket_related_issue
 from emi_ggus_mon.query import emi_third_level_assigned_tickets, \
     open_tickets_for_su, emi_third_level_open_tickets, \
     emi_third_level_open_tickets_in_period, open_tickets_for_su_in_period, \
     emi_submitted_tickets_in_period, third_level_submitted_tickets_in_period, \
-    third_level_closed_tickets_in_period
+    third_level_closed_tickets_in_period,\
+    open_very_urgent_and_top_priority_tickets, open_on_hold_tickets
 from emi_ggus_mon.su import emi_support_units, emi_3rd_level_su
 from emi_ggus_mon.ws import get_tickets
 from string import Template
@@ -37,7 +38,7 @@ The tickets in assigned include:
     ${numLessUrgent} less urgent.
 """)
 
-statuses = ["assigned", "in progress", "on hold", "reopened", "waiting for reply", "solved", "unsolved", "verified"]
+statuses = ["new", "assigned", "in progress", "on hold", "reopened", "waiting for reply", "solved", "unsolved", "verified", "closed"]
 priorities = ["less urgent", "urgent", "very urgent", "top priority"]
 
 sla_constraints = { "top priority": timedelta(hours=4),
@@ -333,7 +334,8 @@ def print_ksa_1_1(start_date,end_date=datetime.now()):
 def print_submitted_tickets_report(start_date, end_date=datetime.now()):
     
     print "Producing EMI support summary report for period %s-%s. Please be patient..." % (start_date.strftime(date_format_str),end_date.strftime(date_format_str))
-    print
+    print "EMI SUs covered (%d): \n%s" % (len(emi_support_units),"\n".join(sorted(emi_support_units.keys())))
+    
     tickets = get_tickets(emi_submitted_tickets_in_period(start_date,end_date))
     
     status_classification = classify_status(tickets)
@@ -347,8 +349,9 @@ The status for these tickets is currently:
         ${numOnHold} on hold,
         ${numReopened} reopened,
         ${numWaitingForReply} waiting for reply,
-        ${numSolved} closed as solved,
-        ${numUnsolved} closed as unsolved,
+        ${numSolved} solved,
+        ${numUnsolved} unsolved,
+        ${numClosed} closed,
         ${numVerified} verified.
         
 The current priority classification of the above tickets is:
@@ -367,6 +370,7 @@ The current priority classification of the above tickets is:
             'numReopened': len(status_classification['reopened']),
             'numSolved': len(status_classification['solved']),
             'numUnsolved': len(status_classification['unsolved']),
+            'numClosed' : len(status_classification['closed']),
             'numVerified': len(status_classification['verified']),
             'numWaitingForReply': len(status_classification['waiting for reply']),
             'numTopPriority': len(priority_classification['top priority']),
@@ -378,7 +382,7 @@ The current priority classification of the above tickets is:
         
     print report_template.safe_substitute(keys)
     
-    sus = sorted(su_classification.keys(), key=str.lower)
+    sus = sorted(su_classification.keys())
     print
     print "The above tickets are currently assigned to the following SUs:"
     for su in sus:
@@ -408,8 +412,10 @@ def classify_status(tickets):
     
     for t in tickets:
         status = ticket_status(t)
+        if status not in statuses:
+            raise RuntimeError, "Unknown status: %s" % status
         status_classification[status].append(t)
-    
+        
     return status_classification
 
 
@@ -425,7 +431,39 @@ def classify_priority(tickets):
         priority_classification[prio].append(t)
     
     return priority_classification
+
+def print_eta_status_report():
+    print "Producing ETA status report. Please be patient..."
     
+    tickets = get_tickets(open_very_urgent_and_top_priority_tickets())
+    print "As of %s there are %d very urgent and top priority tickets which have ETA not set." % (datetime.now(), len(tickets))
+    print
+    for t in filter(lambda x:ticket_eta(x) is None, sorted(tickets, key=ticket_priority)):
+        ggus_t = get_ggus_ticket(ticket_id(t))
+        assigned_time = ggus_t.get_sla_compliance_values()[ticket_su(t)].assigned_time
+        print "%-22s: https://ggus.eu/tech/ticket_show.php?ticket=%s ( %-3d days old ) %-15s %-18s \"%s\"" %(ticket_su(t),
+                                                                                           ticket_id(t),
+                                                                                           (datetime.now()-assigned_time).days,
+                                                                                           ticket_priority(t),
+                                                                                           ticket_status(t),
+                                                                                           ticket_short_description(t))
+def print_on_hold_report():
+    print "Producing on-hold tickets status report. Please be patient..."
+    print "As of %s the following tickets are in on-hold status but don't have a related issue registered in GGUS." % datetime.now()
+    tickets = get_tickets(open_on_hold_tickets())
+    for t in filter(lambda x:ticket_related_issue(x) is None, sorted(tickets, key=ticket_su)):
+        ggus_t = get_ggus_ticket(ticket_id(t))
+        assigned_time = ggus_t.get_sla_compliance_values()[ticket_su(t)].assigned_time
+        print "%-22s: https://ggus.eu/tech/ticket_show.php?ticket=%s ( %-3d days old ) %-15s %-15s \"%s\"" %(ticket_su(t),
+                                                                                           ticket_id(t),
+                                                                                           (datetime.now()-assigned_time).days,
+                                                                                           ticket_priority(t),
+                                                                                           ticket_status(t),
+                                                                                           ticket_short_description(t))
+    
+    
+    
+
 def print_assigned_ticket_status_report(twiki_format=False):
     
     tickets = get_tickets(emi_third_level_open_tickets())
@@ -457,6 +495,8 @@ def print_assigned_ticket_status_report(twiki_format=False):
     print "Assigned ticket detail (per priority):"
     print
     print_assigned_tickets_report(assigned_priority_classification)
+    print_eta_status_report()
+    print_on_hold_report()
     
     if twiki_format:
         print "</verbatim>"
