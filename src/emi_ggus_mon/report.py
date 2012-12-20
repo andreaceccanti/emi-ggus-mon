@@ -495,7 +495,9 @@ def print_assigned_ticket_status_report(twiki_format=False):
     print "Assigned ticket detail (per priority):"
     print
     print_assigned_tickets_report(assigned_priority_classification)
+    print "\n\n"
     print_eta_status_report()
+    print "\n\n"
     print_on_hold_report()
     
     if twiki_format:
