@@ -7,7 +7,10 @@ Created on 17/ago/2011
 from su import wrongly_assigned_emi_su, emi_1st_level_su
 from datetime import datetime, date
 from emi_ggus_mon.su import still_unassigned_emi_su, emi_3rd_level_su,\
-    emi_support_units
+    emi_support_units, cnaf_sus
+
+START_OF_EMI_PROJECT = datetime(2010,5,1,0,0,0)
+END_OF_EMI_PROJECT = datetime(2013,4,30,0,0,0)
 
 def build_third_level_query_str(str):
     excluded_su = wrongly_assigned_emi_su + emi_1st_level_su.keys()  
@@ -99,5 +102,15 @@ def emi_closed_tickets_in_period(start_date,end_date):
     query_str = "'GHD_Meta Status'=\"Closed\" AND 'GHD_Last Update' >= \"%s\" AND 'GHD_Last Update' <= \"%s\" AND (" % (start_date.strftime("%s"),end_date.strftime("%s"))
     su_str = "".join(["'GHD_Responsible Unit' = \"%s\" OR " % i for i in emi_support_units])[0:-3] + ")"
     return query_str+su_str
-    
+
+def emi_all_tickets():
+    query_str = "'GHD_Last Update' > \"%s\" AND 'GHD_Date Of Creation' <= \"%s\" AND " % (START_OF_EMI_PROJECT.strftime("%s"),END_OF_EMI_PROJECT.strftime("%s"))
+    su_str = "("+ "".join(["'GHD_Responsible Unit' = \"%s\" OR " % i for i in emi_support_units])[0:-3] + ")"
+    return query_str + su_str
+
+def cnaf_open_tickets():
+    query_str = "'GHD_Meta Status'=\"Open\" AND"
+    su_str = "("+ "".join(["'GHD_Responsible Unit' = \"%s\" OR " % i for i in cnaf_sus])[0:-3] + ")"
+    return query_str + su_str
+                           
     

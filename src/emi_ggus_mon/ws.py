@@ -50,10 +50,12 @@ def get_tickets2(query1, query2):
     
     return retval
     
-def get_tickets(query):
+def get_tickets(query, start=0, limit=-1):
     retval = []
     ggus_client = init_ggus_client(help_desk_url)
-    list_result = ggus_client.service.TicketGetList(query,startRecord="0", maxLimit="-1")
+    list_result = ggus_client.service.TicketGetList(query,
+                                                    startRecord=start, 
+                                                    maxLimit=limit)
     for t in list_result:
         retval.append(ggus_client.service.TicketGet(t['GHD_Request-ID']))
      

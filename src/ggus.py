@@ -1,14 +1,18 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*- 
 from datetime import datetime
 from emi_ggus_mon import __version__
 from emi_ggus_mon.report import print_assigned_ticket_status_report, \
     print_su_report, print_sla_report, print_sla_stats, \
     print_submitted_tickets_report, print_ksa_1_2, print_ksa_1_1,\
-    print_eta_status_report, print_on_hold_report
+    print_eta_status_report, print_on_hold_report, print_ticket_history,\
+    print_all_tickets_report
 from optparse import OptionParser
 from string import split
 import logging
 import sys
+import codecs
+from emi_ggus_mon.monitoring import check_ticket_status
 
 SLA_START_DATE = datetime(2011,4,12,9,0,0)
 SLA_START_MONITORING_DATE = datetime(2011,8,26,9,0,0)
@@ -18,9 +22,12 @@ def parse_period(period_str):
     return (datetime.strptime(dates[0],'%d/%m/%Y'),datetime.strptime(dates[1],'%d/%m/%Y'))
     
 def main():
+    
     logging.basicConfig(level=logging.INFO)
     logging.getLogger('suds.client').setLevel(logging.FATAL)
     
+    sys.stdout = codecs.getwriter('utf-8')(sys.stdout)
+    sys.stderr = codecs.getwriter('utf-8')(sys.stderr)
     
     parser = OptionParser()
     parser.add_option("-t", 
@@ -39,6 +46,16 @@ def main():
                      "--su",
                      dest="su",
                      help="List of SUs for which the stats should be computed.")
+    
+    parser.add_option("", 
+                      "--start", 
+                      dest="start", 
+                      help="Record start")
+    
+    parser.add_option("", 
+                      "--limit", 
+                      dest="limit", 
+                      help="Record limit")
     
     
     (options, args) = parser.parse_args()
@@ -108,7 +125,22 @@ def main():
                 (start_date,end_date) = parse_period(options.period)
             
             print_ksa_1_2(start_date,end_date)
+        
+        elif cmd == "ticket-history":
+            print_ticket_history(args[1:])
             
+        elif cmd == "all-tickets":
+            start = 0
+            limit = -1
+            
+            if options.limit:
+                limit = options.limit
+            if options.start:
+                start = options.start
+            
+            print_all_tickets_report(start,limit)
+        elif cmd == 'cnaf':
+            check_ticket_status()
         else:
             print >>sys.stderr, "Unknown command ", cmd
             sys.exit(1)

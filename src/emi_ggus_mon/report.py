@@ -7,20 +7,24 @@ Created on 30/ago/2011
 from datetime import datetime, timedelta
 from emi_ggus_mon.business import BusinessCalendar
 from emi_ggus_mon.model import ticket_priority, ticket_status, ticket_su, \
-    ticket_id, ticket_short_description, get_ggus_ticket, get_ggus_tickets, \
-    ticket_url, ticket_eta, ticket_creation_time, ticket_related_issue
+    ticket_id, ticket_short_description, get_ggus_ticket,  \
+    ticket_url, ticket_eta, ticket_creation_time, ticket_related_issue,\
+    ticket_date_of_change
+    
 from emi_ggus_mon.query import emi_third_level_assigned_tickets, \
     open_tickets_for_su, emi_third_level_open_tickets, \
     emi_third_level_open_tickets_in_period, open_tickets_for_su_in_period, \
-    emi_submitted_tickets_in_period, third_level_submitted_tickets_in_period, \
+    emi_submitted_tickets_in_period, \
     third_level_closed_tickets_in_period,\
-    open_very_urgent_and_top_priority_tickets, open_on_hold_tickets
+    open_very_urgent_and_top_priority_tickets, open_on_hold_tickets,\
+    emi_all_tickets
+    
 from emi_ggus_mon.su import emi_support_units, emi_3rd_level_su
-from emi_ggus_mon.ws import get_tickets
+from emi_ggus_mon.ws import get_tickets, get_ticket
 from string import Template
 from suds import WebFault
 from sys import stderr
-import sys
+import sys, time
 
 
 report_template = Template("""As of ${now}, there are ${numOpen} open tickets in EMI SUs, of which:
@@ -51,30 +55,23 @@ sla_constraints = { "top priority": timedelta(hours=4),
 date_format_str = '%d/%m/%Y'
 
 def format_date(d):
+    if d is None:
+        return "None"
     return d.strftime(date_format_str)
 
+def ggus_ticket_resolution_delay(ggus_ticket):
+    sla_comp_values = ggus_ticket.get_sla_compliance_values2()
+    delay_accumulator = 0
+    
+    for cv in sla_comp_values:
+        if cv.sla_delay:
+            delay_accumulator = delay_accumulator + cv.sla_delay
+    
+    return delay_accumulator
+    
 def ticket_resolution_delay(ticket):
-    
     ggus_ticket = get_ggus_ticket(ticket_id(ticket))
-    
-    sla_comp_values = ggus_ticket.get_sla_compliance_values()[ticket_su(ticket)]
-    
-    bc = BusinessCalendar(sla_comp_values.assigned_time)
-    resolution_date = bc.add_business_time(sla_constraints[sla_comp_values.priority_when_assigned])
-    
-    out_of_assigned_time = sla_comp_values.out_of_assigned_time
-    if out_of_assigned_time is None:
-        out_of_assigned_time = datetime.now()
-    
-    if resolution_date >= out_of_assigned_time:
-        return timedelta(hours=0)
-    else:
-        if out_of_assigned_time != resolution_date.day:
-            bd_delay = BusinessCalendar(resolution_date).count_business_days(out_of_assigned_time)
-            return timedelta(days=bd_delay)
-        
-        return out_of_assigned_time - resolution_date    
-
+    return ggus_ticket_resolution_delay(ggus_ticket)
 
 def print_assigned_tickets_report(assigned_priority_classification=None):
     
@@ -194,6 +191,7 @@ def print_sla_report(start_date, end_date=datetime.now(), su_list=None, print_se
                 accum = accum / len(priority_classification[prio])
             
             priority_averages[prio] = accum
+        
         if print_seconds:
             print template_line % (su,
                                    td_seconds(priority_averages[priorities[0]]),
@@ -211,6 +209,9 @@ def print_sla_report(start_date, end_date=datetime.now(), su_list=None, print_se
            
 def td_seconds(timedelta):
     return timedelta.seconds + timedelta.days * 24 * 3600
+
+def td_hours(timedelta):
+    return timedelta.days * 24 + timedelta.seconds // 3600
 
 def print_su_report():
     sus = sorted(emi_support_units.keys(), key=str.lower)
@@ -285,7 +286,129 @@ def median_solution_time(tickets):
             median_index = (len(solution_times)+1)/2
             return solution_times[median_index]
    
+
+
+def print_ticket_history(ticket_list):
+    for ticket_no in ticket_list:
+        try:
+            ticket = get_ticket(ticket_no)
+        
+            ggus_ticket = get_ggus_ticket(ticket_no)
+            print "##########"
+            print "Ticket: %s" % ticket_url(ticket)
+            print "Summary: %s" % ticket_short_description(ticket)
+            print "SU: %s" % ticket_su(ticket)
+            print 'Last change: %s' % ticket_date_of_change(ticket)
+            print "Priority: %s" % ticket_priority(ticket)
+            print "Status: %s" % ticket_status(ticket)
+            print
+            print "Status History: "
+            print
+            ggus_ticket.print_status_history()
+            print
+            print "Priority History: "
+            print
+            ggus_ticket.print_priority_history()
+            print
+            print "SLA compliance values:"
+            print
+            val = ggus_ticket.get_sla_compliance_values2()
+            counter = 0
+            for v in val:
+                
+                
+                if v.sla_delay:
+                    sla_check_str = "Delay: %d business minutes (i.e. %d business hours, or  %d business days)" % (v.sla_delay,
+                                                                                                                   v.sla_delay // 60,
+                                                                                                                   v.sla_delay // 480)
+                else:
+                    sla_check_str = "SLA Check OK"    
+                
+                print "#", counter, " (%s)" % v.su, sla_check_str
+                print "Priority when assigned: %s" % v.priority_when_assigned
+                print "Assigned to SU %s on: %s" % (v.su, v.assigned_time)
+                print "SLA constraint: %s" % sla_constraints[v.priority_when_assigned]
+                print "Expected takeover: %s" % v.expected_takeover_time
+                print "Actual takeover: %s" % v.out_of_assigned_time
+                print "Out of assign status: %s" % v.out_of_assigned_status
+                print
+                counter = counter + 1
+            print "##########"
+            print 
+            
+        except WebFault:
+            print >> stderr, "Error loading ticket %s" % (ticket_no)
+
+def print_su_classification(su_class):
     
+    sus = sorted(su_class.keys(), key=str.lower)
+    print
+    print "# Ticket count per SU:"
+    print
+    for su in sus:
+        if len(su_class[su]) == 0:
+            continue
+        print '%s: %s' % (su, len(su_class[su]))
+    print
+    
+    print "# Ticket list per SU:"
+    print
+    for su in sus:
+        if len(su_class[su]) == 0:
+            continue
+        ticket_ids = ",".join(map(lambda x: ticket_id(x), su_class[su]))
+        print '%s: %s' % (su, ticket_ids)
+    print
+        
+def print_all_tickets_report(start=0,limit=-1):
+    print >> sys.stderr, "Producing all tickets stats for EMI SUs. Please be patient..."
+    
+    try:
+        start_time = time.time()
+        tickets = get_tickets(emi_all_tickets(), start, limit)
+        query_time = time.time() - start_time
+        print "The query completed in %d seconds returning %d tickets." % (query_time, len(tickets))
+        
+    except WebFault, e:
+        print >>stderr, "Error query for all EMI tickets: %s" % e
+        exit(-1)
+    
+    su_classification = classify_su(tickets,emi_support_units)
+    print_su_classification(su_classification)
+    print
+    
+    sus = sorted(su_classification.keys(), key=str.lower)
+    
+    start_time = time.time()
+    print "su;ticket_url;status;priority;creation_time;last_assigned_time;solution_time;time_to_solution_in_days;sla_delay_in_hours"
+    for su in sus:
+        for t in su_classification[su]:
+            ggus_ticket = get_ggus_ticket(ticket_id(t))
+            
+            if ggus_ticket.solution_time():
+                time_to_solution = "%d" % ggus_ticket.solution_time().days
+            else:
+                time_to_solution = ""
+                
+            last_solution_time = ggus_ticket.last_solution_time()
+            if not last_solution_time:
+                last_solution_time = ""
+            
+            delay_in_minutes = ggus_ticket_resolution_delay(ggus_ticket)
+             
+            print "%s;%s;%s;%s;%s;%s;%s;%s;%s" % (su,
+                                                  ticket_url(t),
+                                                  ticket_status(t),
+                                                  ticket_priority(t),
+                                                  ticket_creation_time(t),
+                                                  ggus_ticket.assigned_time(),
+                                                  last_solution_time,
+                                                  time_to_solution,
+                                                  delay_in_minutes // 60)
+    
+    print
+    print "CSV generation took %d seconds. " % (time.time() - start_time)                                      
+        
     
 def print_ksa_1_2(start_date,end_date=datetime.now()):
     print >>sys.stderr, "Producing KSA1.2 kpi csv file for period %s-%s. Please be patient..." % (format_date(start_date),format_date(end_date))

@@ -30,7 +30,14 @@ class SupportUnit(object):
         if not holidays:
             return self.holidays
         self.holidays = holidays
-    
+
+cnaf_sus = {
+    "ARGUS" : SupportUnit("ARGUS"),
+    "StoRM" : SupportUnit("StoRM"),
+    "VOMS" : SupportUnit("VOMS"),
+    "VOMS-Admin" : SupportUnit("VOMS-Admin")
+}
+
 emi_1st_level_su = { 
                      "EMI QA" : SupportUnit("EMI QA"),
                      "EMI Release Management" : SupportUnit("EMI Release Management"),
@@ -77,8 +84,8 @@ emi_3rd_level_su = {
                      "lcg_util Development" : SupportUnit("lcg_util Development"),
                      
                      ## Middleware clients 
-                     # "gLite UI" : SupportUnit("gLite UI"),
-                     # "gLite WN" : SupportUnit("gLite WN"),
+                     "gLite UI" : SupportUnit("gLite UI"),
+                     "gLite WN" : SupportUnit("gLite WN"),
                      
                      ## Batch systems
                      "gLite LSF Utils" : SupportUnit("gLite LSF Utils"),
