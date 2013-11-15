@@ -71,6 +71,13 @@ def main():
                       dest="recipients",
                       help="List of comma separated email addresses that will be notified of report generation.")
     
+    parser.add_option("",
+                      "--skip_notification",
+                      dest="skip_notification",
+                      action="store_true",
+                      help="Generates the report but doesn't send out the notification",
+                      default=False)
+    
     
     (options, args) = parser.parse_args()
     
@@ -163,14 +170,15 @@ def main():
             if options.report_url is None:
                 print >> sys.stderr, "Please set the --report_url option!"
                 sys.exit(2)
-                
-            if options.recipients is None:
+            
+            if not options.skip_notification and options.recipients is None:
                 print >> sys.stderr, "Please set the --recipients option!"
                 sys.exit(2)
             
             check_ticket_status(report_dir=options.target_dir, 
                                 report_url=options.report_url,
-                                recipients=options.recipients)
+                                recipients=options.recipients,
+                                skip_notification=options.skip_notification)
         else:
             print >>sys.stderr, "Unknown command ", cmd
             sys.exit(1)

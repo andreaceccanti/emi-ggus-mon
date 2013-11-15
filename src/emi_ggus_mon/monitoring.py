@@ -116,9 +116,13 @@ def send_notification(subject,
     
     list_of_recipients = recipients.split(',')
     s = smtplib.SMTP(smtp_server)
-    s.sendmail(sender,
-               list_of_recipients,
-               msg.as_string())
+    results = s.sendmail(sender,
+                         list_of_recipients,
+                         msg.as_string())
+    if len(results) > 0:
+        for k in results.keys():
+            print >> sys.stderr, "%s: %s" % (k, results[k])
+    
     s.quit()
 
 
@@ -208,11 +212,14 @@ def get_html_report(tickets):
              
     return (report.substitute({"content":tickets_content.getvalue(), "date": current_time}),current_time_fname)
     
-def send_report_announce(url, recipients):
+def send_report_announce(base_url, filename, recipients):
     msg = StringIO.StringIO()
     
     print >> msg, "A GGUS status report has been generated at the following url:\n"
-    print >> msg, "%s" % url
+    print >> msg, "%s\n" % base_url
+    print >> msg, "which is the url where the latest repo will be placed."
+    print >> msg, "More precisely, the currently generated report is reachabled at:\n"
+    print >> msg, "%s/%s\n" % (base_url,filename)
     
     send_notification("[ggus-monitor] GGUS ticket status report", 
                       msg.getvalue(),
@@ -259,7 +266,7 @@ def report_dir_sanity_checks(report_dir):
     if not os.path.isdir(report_dir):
         raise RuntimeError("%s is not a directory." % report_dir)
     
-def check_ticket_status(report_dir, report_url, recipients):
+def check_ticket_status(report_dir, report_url, recipients, skip_notification):
     report_dir_sanity_checks(report_dir)
     
     print "Generating CNAF GGUS html report"
@@ -283,9 +290,13 @@ def check_ticket_status(report_dir, report_url, recipients):
         
         os.symlink(os.path.join(report_dir, filename), os.path.join(report_dir, "index.html"))
         
-        print "Report written to %s" % os.path.join(report_dir, filename)
-        send_report_announce(os.path.join(report_url,filename), recipients)
-        print "Announcement sent to %s" % recipients
+        print "Report written to %s." % os.path.join(report_dir, filename)
+        
+        if not skip_notification:
+            send_report_announce(report_url, filename, recipients)
+            print "Announcement sent to %s." % recipients
+        else:
+            print "Announcement skipped as requested."
     except IOError as e:
         print >>sys.stderr, "IOError: %s " % e
         sys.exit(1)
