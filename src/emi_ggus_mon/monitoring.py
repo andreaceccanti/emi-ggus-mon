@@ -114,9 +114,10 @@ def send_notification(subject,
     msg['To'] = recipients
     msg['Subject'] = subject
     
+    list_of_recipients = recipients.split(',')
     s = smtplib.SMTP(smtp_server)
     s.sendmail(sender,
-               recipients,
+               list_of_recipients,
                msg.as_string())
     s.quit()
 
