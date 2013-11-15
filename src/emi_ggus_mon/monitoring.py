@@ -186,8 +186,10 @@ def get_html_report(tickets):
             for t in priority_classification[p]:
                 print >> urgent_tickets_content, format_ticket_html(t)
         table_content = table.substitute({"content": urgent_tickets_content.getvalue()})
+        panel_title = "Tickets that need immediate attention <span class=\"badge badge-title\">%d</span>" % len(urgent_tickets)
+        
         print >> tickets_content, panel.substitute({"panel_class": "panel-primary",
-                                                    "panel_title": "Tickets that need immediate attention.",
+                                                    "panel_title": panel_title,
                                                     "content" : table_content})
     
     if len(other_tickets) > 0:
@@ -197,9 +199,9 @@ def get_html_report(tickets):
                         reverse=True):
             for t in priority_classification[p]:
                 print >> other_tickets_content, format_ticket_html(t)
-        
-        print >> tickets_content, panel.substitute({"panel_class": "panel-info", 
-                                                    "panel_title": "Other tickets.",
+        panel_title = "Other open tickets <span class=\"badge badge-title\">%d</span>" % len(other_tickets)
+        print >> tickets_content, panel.substitute({"panel_class": "panel-primary", 
+                                                    "panel_title": panel_title,
                                                     "content": table.substitute({"content": other_tickets_content.getvalue()})})
         
              
@@ -208,8 +210,8 @@ def get_html_report(tickets):
 def send_report_announce(url, recipients):
     msg = StringIO.StringIO()
     
-    print >> msg, "A GGUS status report has been generated at the following url:"
-    print >> msg, "\t%s" % url
+    print >> msg, "A GGUS status report has been generated at the following url:\n"
+    print >> msg, "%s" % url
     
     send_notification("[ggus-monitor] GGUS ticket status report", 
                       msg.getvalue(),
@@ -266,13 +268,22 @@ def check_ticket_status(report_dir, report_url, recipients):
         print >> sys.stderr, "Error fetching open tickets for CNAF SUs. %s" % f
     
     (report, filename) = get_html_report(tickets)
-    url = "%s/%s" % ( report_url, filename )
     try:
         report_file = open(os.path.join(report_dir, filename), "w")
         report_file.write(report)
         report_file.close() 
+        
+        ## update index.html
+        try:
+            os.remove(os.path.join(report_dir, "index.html"))
+        except OSError as e:
+            ## We swallow the error 
+            print >>sys.stderr, e
+        
+        os.symlink(os.path.join(report_dir, filename), os.path.join(report_dir, "index.html"))
+        
         print "Report written to %s" % os.path.join(report_dir, filename)
-        send_report_announce(url, recipients)
+        send_report_announce(os.path.join(report_url,filename), recipients)
         print "Announcement sent to %s" % recipients
     except IOError as e:
         print >>sys.stderr, "IOError: %s " % e
