@@ -159,10 +159,11 @@ def get_html_report(tickets):
                 </div>
             </div>
             ${content}
-            </div>"""
+            </div><!-- panel -->"""
             
     table_template="""
             <table class=\"table table-striped table-bordered\">
+                <thead>
                 <tr>
                     <th>SU</th>
                     <th>Ticket</th>
@@ -171,7 +172,10 @@ def get_html_report(tickets):
                     <th>Desc.</th>
                     <th>Age</th>
                 </tr>
+                </thead>
+                <tbody>
                 ${content}
+                </tbody>
             </table>"""
     
     table = Template(table_template)
