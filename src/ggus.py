@@ -50,17 +50,32 @@ def main():
     parser.add_option("", 
                       "--start", 
                       dest="start", 
-                      help="Record start")
+                      help="Record start.")
     
     parser.add_option("", 
                       "--limit", 
                       dest="limit", 
-                      help="Record limit")
+                      help="Record limit.")
+    
+    parser.add_option("",
+                      "--target_dir",
+                      dest="target_dir",
+                      help="HTML report target directory. The script will place the cnaf ggus report in the given directory.")
+    
+    parser.add_option("",
+                      "--report_url",
+                      dest="report_url",
+                      help="URL where generated report can be accessed.")
+    parser.add_option("",
+                      "--recipients",
+                      dest="recipients",
+                      help="List of comma separated email addresses that will be notified of report generation.")
     
     
     (options, args) = parser.parse_args()
     
     print "emi-ggus-mon v. %s. " % __version__
+    
     if len(args) == 0:
         print 
         print "Producing EMI support status report, please be patient..." 
@@ -139,8 +154,23 @@ def main():
                 start = options.start
             
             print_all_tickets_report(start,limit)
+        
         elif cmd == 'cnaf':
-            check_ticket_status()
+            if options.target_dir is None:
+                print >> sys.stderr, "Please set the --target_dir option!"
+                sys.exit(2)
+            
+            if options.report_url is None:
+                print >> sys.stderr, "Please set the --report_url option!"
+                sys.exit(2)
+                
+            if options.recipients is None:
+                print >> sys.stderr, "Please set the --recipients option!"
+                sys.exit(2)
+            
+            check_ticket_status(report_dir=options.target_dir, 
+                                report_url=options.report_url,
+                                recipients=options.recipients)
         else:
             print >>sys.stderr, "Unknown command ", cmd
             sys.exit(1)
