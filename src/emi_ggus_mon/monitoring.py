@@ -162,7 +162,7 @@ def get_html_report(tickets):
             </div><!-- panel -->"""
             
     table_template="""
-            <table class=\"table table-striped table-bordered\">
+            <table class=\"table table-striped\">
                 <thead>
                 <tr>
                     <th>SU</th>
