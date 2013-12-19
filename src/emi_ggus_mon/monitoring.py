@@ -73,6 +73,11 @@ def ticket_needs_attention(t):
         (ticket_status(t) == "on hold" and ticket_related_issue(t) is None))
     return  val
          
+def waiting_for_reply_tickes(t):
+    return  ticket_status(t) == "waiting for reply"
+
+def on_hold_tickets(t):
+    return ticket_status(t) == "on hold" and ticket_related_issue(t) != None
         
 def format_ticket(t):
     
@@ -128,7 +133,9 @@ def send_notification(subject,
 
 def get_html_report(tickets):
     urgent_tickets = filter(ticket_needs_attention, tickets) 
-    other_tickets = filter(lambda t: not ticket_needs_attention(t), tickets)
+    wfr_tickets = filter(waiting_for_reply_tickes, tickets)
+    other_tickets = filter(on_hold_tickets, tickets)
+    
     current_time = time.strftime("%Y-%m-%d %H:%M")
     current_time_fname = time.strftime("%Y_%m_%d_%H_%M.html")
     
@@ -184,6 +191,7 @@ def get_html_report(tickets):
     
     tickets_content = StringIO.StringIO()
     urgent_tickets_content = StringIO.StringIO()
+    wfr_tickets_content = StringIO.StringIO()
     other_tickets_content =  StringIO.StringIO()
     
     if len(urgent_tickets) > 0:
@@ -201,6 +209,17 @@ def get_html_report(tickets):
                                                     "panel_title": panel_title,
                                                     "content" : table_content})
     
+    if len(wfr_tickets) > 0:
+        priority_classification = classify_priority(wfr_tickets)
+        for p in sorted(priority_classification.keys(),
+                        key=lambda t: GGUS_PRIORITY_MAP[t],
+                        reverse=True):
+            for t in priority_classification[p]:
+                print >> wfr_tickets_content, format_ticket_html(t)
+        panel_title = "Waiting for reply tickets <span class=\"badge badge-title\">%d</span>" % len(wfr_tickets)
+        print >> tickets_content, panel.substitute({"panel_class": "panel-primary", 
+                                                    "panel_title": panel_title,
+                                                    "content": table.substitute({"content": wfr_tickets_content.getvalue()})})
     if len(other_tickets) > 0:
         priority_classification = classify_priority(other_tickets)
         for p in sorted(priority_classification.keys(),
