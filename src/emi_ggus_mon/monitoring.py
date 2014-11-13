@@ -39,7 +39,7 @@ def init_priority_classification():
     return c
 
 def format_ticket_html(t):
-    
+
     template_str = """
         <tr>
         <td>${su}</td>
@@ -49,12 +49,12 @@ def format_ticket_html(t):
         <td><h5>${desc}</h5></td>
         <td><span class=\"badge\">${age}</span></td>
         </tr>"""
-    
+
     ggus_t = get_ggus_ticket(ticket_id(t))
     assigned_time = ggus_t.assigned_time()
     age = (datetime.now() - assigned_time).days
-    
-    
+
+
     template = Template(template_str)
     ticket_str = template.substitute({"id":ticket_id(t),
                          "desc": ticket_short_description(t),
@@ -65,46 +65,46 @@ def format_ticket_html(t):
                          "related": ticket_related_issue(t),
                          "status": ticket_status(t)
                          })
-    
+
     return ticket_str
-    
+
 def ticket_needs_attention(t):
-    val = (ticket_status(t) in ["assigned", "in progress", "reopened"] or 
+    val = (ticket_status(t) in ["assigned", "in progress", "reopened"] or
         (ticket_status(t) == "on hold" and ticket_related_issue(t) is None))
     return  val
-         
+
 def waiting_for_reply_tickes(t):
     return  ticket_status(t) == "waiting for reply"
 
 def on_hold_tickets(t):
     return ticket_status(t) == "on hold" and ticket_related_issue(t) != None
-        
+
 def format_ticket(t):
-    
+
     ggus_t = get_ggus_ticket(ticket_id(t))
     assigned_time = ggus_t.assigned_time()
     age = (datetime.now() - assigned_time).days
-    
+
     warning = ""
     if ticket_status(t) == 'on hold' and ticket_related_issue(t) is None:
         warning = "on hold ticket without related issue!".upper()
-        
+
     template=Template("""${url} \"${desc}\"
                 SU: ${su}
                 Prio: ${prio}
                 Age: ${age}
                 Related issue: ${related}""")
-    
+
     ticket_str = template.substitute({"url":ticket_url(t),
                          "desc": ticket_short_description(t),
                          "su": ticket_su(t),
                          "prio": ticket_priority(t),
                          "age": "%d days old" % age,
                          "related": ticket_related_issue(t)})
-    
+
     if len(warning) > 0:
         ticket_str = ticket_str + "\n\t\t\tWARNING: %s" % warning
-    
+
     return ticket_str
 
 
@@ -113,12 +113,12 @@ def send_notification(subject,
                       sender="GGUS ticket monitor <andrea.ceccanti@cnaf.infn.it>",
                       smtp_server="postino.cnaf.infn.it",
                       recipients='andrea.ceccanti@cnaf.infn.it'):
-    
+
     msg = MIMEText(msg_body, _charset='utf-8')
     msg['From'] = sender
     msg['To'] = recipients
     msg['Subject'] = subject
-    
+
     list_of_recipients = recipients.split(',')
     s = smtplib.SMTP(smtp_server)
     results = s.sendmail(sender,
@@ -127,18 +127,18 @@ def send_notification(subject,
     if len(results) > 0:
         for k in results.keys():
             print >> sys.stderr, "%s: %s" % (k, results[k])
-    
+
     s.quit()
 
 
 def get_html_report(tickets):
-    urgent_tickets = filter(ticket_needs_attention, tickets) 
+    urgent_tickets = filter(ticket_needs_attention, tickets)
     wfr_tickets = filter(waiting_for_reply_tickes, tickets)
     other_tickets = filter(on_hold_tickets, tickets)
-    
+
     current_time = time.strftime("%Y-%m-%d %H:%M")
     current_time_fname = time.strftime("%Y_%m_%d_%H_%M.html")
-    
+
     report_template="""<!DOCTYPE html><html><head>
     <title>GGUS ticket report - ${date}</title>
     <meta charset="utf-8">
@@ -158,7 +158,7 @@ def get_html_report(tickets):
         ${content}
     </div>
     </body>"""
-  
+
     panel_template="""<div class=\"panel ${panel_class}\">
             <div class=\"panel-heading\">
                 <div class=\"panel_title\">
@@ -167,7 +167,7 @@ def get_html_report(tickets):
             </div>
             ${content}
             </div><!-- panel -->"""
-            
+
     table_template="""
             <table class=\"table table-striped\">
                 <thead>
@@ -184,19 +184,19 @@ def get_html_report(tickets):
                 ${content}
                 </tbody>
             </table>"""
-    
+
     table = Template(table_template)
     panel = Template(panel_template)
     report = Template(report_template)
-    
+
     tickets_content = StringIO.StringIO()
     urgent_tickets_content = StringIO.StringIO()
     wfr_tickets_content = StringIO.StringIO()
     other_tickets_content =  StringIO.StringIO()
-    
+
     if len(urgent_tickets) > 0:
         priority_classification = classify_priority(urgent_tickets)
-    
+
         for p in sorted(priority_classification.keys(),
                         key=lambda t: GGUS_PRIORITY_MAP[t],
                         reverse=True):
@@ -204,11 +204,11 @@ def get_html_report(tickets):
                 print >> urgent_tickets_content, format_ticket_html(t)
         table_content = table.substitute({"content": urgent_tickets_content.getvalue()})
         panel_title = "Tickets that need immediate attention <span class=\"badge badge-title\">%d</span>" % len(urgent_tickets)
-        
+
         print >> tickets_content, panel.substitute({"panel_class": "panel-primary",
                                                     "panel_title": panel_title,
                                                     "content" : table_content})
-    
+
     if len(wfr_tickets) > 0:
         priority_classification = classify_priority(wfr_tickets)
         for p in sorted(priority_classification.keys(),
@@ -217,7 +217,7 @@ def get_html_report(tickets):
             for t in priority_classification[p]:
                 print >> wfr_tickets_content, format_ticket_html(t)
         panel_title = "Waiting for reply tickets <span class=\"badge badge-title\">%d</span>" % len(wfr_tickets)
-        print >> tickets_content, panel.substitute({"panel_class": "panel-primary", 
+        print >> tickets_content, panel.substitute({"panel_class": "panel-primary",
                                                     "panel_title": panel_title,
                                                     "content": table.substitute({"content": wfr_tickets_content.getvalue()})})
     if len(other_tickets) > 0:
@@ -228,29 +228,29 @@ def get_html_report(tickets):
             for t in priority_classification[p]:
                 print >> other_tickets_content, format_ticket_html(t)
         panel_title = "Other open tickets <span class=\"badge badge-title\">%d</span>" % len(other_tickets)
-        print >> tickets_content, panel.substitute({"panel_class": "panel-primary", 
+        print >> tickets_content, panel.substitute({"panel_class": "panel-primary",
                                                     "panel_title": panel_title,
                                                     "content": table.substitute({"content": other_tickets_content.getvalue()})})
-        
-             
-    return (report.substitute({"content":tickets_content.getvalue(), "date": current_time}),current_time_fname)
-    
+
+
+    return (report.substitute({"content":tickets_content.getvalue(), "date": current_time}),"index.html")
+
 def send_report_announce(base_url, filename, recipients):
     msg = StringIO.StringIO()
-    
+
     print >> msg, "A GGUS status report has been generated at the following url:\n"
     print >> msg, "%s\n" % base_url
     print >> msg, "which is the url where the latest repo will be placed."
     print >> msg, "More precisely, the currently generated report is reachabled at:\n"
     print >> msg, "%s/%s\n" % (base_url,filename)
-    
-    send_notification("[ggus-monitor] GGUS ticket status report", 
+
+    send_notification("[ggus-monitor] GGUS ticket status report",
                       msg.getvalue(),
                       recipients=recipients)
-    
+
 def send_tickets_reminder(tickets):
     status_classification = classify_status(tickets)
-    
+
     msg = StringIO.StringIO()
     print >> msg, "Tickets status report for %s" % (", ".join(sorted(cnaf_sus)))
     print >> msg
@@ -260,7 +260,7 @@ def send_tickets_reminder(tickets):
     print >> msg
     for s in GGUS_OPEN_STATES:
         if len(status_classification[s]) > 0:
-            print >> msg, "%s:\n" % s.upper() 
+            print >> msg, "%s:\n" % s.upper()
             priority_classification = classify_priority(status_classification[s])
             for p in sorted(priority_classification.keys(),
                             key=lambda t: GGUS_PRIORITY_MAP[t],
@@ -268,53 +268,53 @@ def send_tickets_reminder(tickets):
                 if len(priority_classification[p]) > 0:
                     for t in priority_classification[p]:
                         print >> msg, "\t" + format_ticket(t)
-                        print >> msg 
+                        print >> msg
             print >> msg
-    
+
     msg_str = msg.getvalue()
     msg.close()
-    
+
     print msg_str
     send_notification("[ggus-monitor] GGUS ticket status report",
                       msg_str)
-    
-    print "Status report sent"        
+
+    print "Status report sent"
 
 
 def report_dir_sanity_checks(report_dir):
-    
+
     if not os.path.exists(report_dir):
         raise RuntimeError("%s does not exist." % report_dir)
-    
+
     if not os.path.isdir(report_dir):
         raise RuntimeError("%s is not a directory." % report_dir)
-    
+
 def check_ticket_status(report_dir, report_url, recipients, skip_notification):
     report_dir_sanity_checks(report_dir)
-    
+
     print "Generating CNAF GGUS html report"
     try:
         tickets = get_tickets(cnaf_open_tickets())
     except WebFault, f:
         print >> sys.stderr, "Error fetching open tickets for CNAF SUs. %s" % f
-    
+
     (report, filename) = get_html_report(tickets)
     try:
         report_file = open(os.path.join(report_dir, filename), "w")
         report_file.write(report)
-        report_file.close() 
-        
+        report_file.close()
+
         ## update index.html
         try:
             os.remove(os.path.join(report_dir, "index.html"))
         except OSError as e:
-            ## We swallow the error 
+            ## We swallow the error
             print >>sys.stderr, e
-        
+
         os.symlink(os.path.join(report_dir, filename), os.path.join(report_dir, "index.html"))
-        
+
         print "Report written to %s." % os.path.join(report_dir, filename)
-        
+
         if not skip_notification:
             send_report_announce(report_url, filename, recipients)
             print "Announcement sent to %s." % recipients
@@ -323,25 +323,25 @@ def check_ticket_status(report_dir, report_url, recipients, skip_notification):
     except IOError as e:
         print >>sys.stderr, "IOError: %s " % e
         sys.exit(1)
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-                                                      
-                                                      
-            
-        
-        
-    
-    
-    
-    
-    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
