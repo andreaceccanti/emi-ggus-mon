@@ -233,7 +233,7 @@ def get_html_report(tickets):
                                                     "content": table.substitute({"content": other_tickets_content.getvalue()})})
 
 
-    return (report.substitute({"content":tickets_content.getvalue(), "date": current_time}),"index.html")
+    return (report.substitute({"content":tickets_content.getvalue(), "date": current_time}),"report.html")
 
 def send_report_announce(base_url, filename, recipients):
     msg = StringIO.StringIO()
@@ -304,22 +304,8 @@ def check_ticket_status(report_dir, report_url, recipients, skip_notification):
         report_file.write(report)
         report_file.close()
 
-        ## update index.html
-        try:
-            os.remove(os.path.join(report_dir, "index.html"))
-        except OSError as e:
-            ## We swallow the error
-            print >>sys.stderr, e
-
-        os.symlink(os.path.join(report_dir, filename), os.path.join(report_dir, "index.html"))
-
         print "Report written to %s." % os.path.join(report_dir, filename)
 
-        if not skip_notification:
-            send_report_announce(report_url, filename, recipients)
-            print "Announcement sent to %s." % recipients
-        else:
-            print "Announcement skipped as requested."
     except IOError as e:
         print >>sys.stderr, "IOError: %s " % e
         sys.exit(1)
