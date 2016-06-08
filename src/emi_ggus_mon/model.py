@@ -84,7 +84,7 @@ def ticket_url(ggus_ticket):
     return "https://ggus.eu/ws/ticket_info.php?ticket=%s" % ticket_id(ggus_ticket)
 
 def ticket_id(ggus_ticket):
-    return ggus_ticket['GHD_Request-ID']
+    return ggus_ticket['GHD_Request_ID']
 
 def ticket_priority_index(ggus_ticket):
     return GGUS_PRIORITY_MAP[ticket_priority(ggus_ticket)]

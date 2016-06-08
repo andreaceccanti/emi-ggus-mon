@@ -10,7 +10,7 @@ sys.path.insert(0,"src")
 
 from emi_ggus_mon import __version__
 
-setup(name='emi_ggus_mon',
+setup(name='cnaf_mon',
       version=__version__,
       author="Andrea Ceccanti",
       author_email="andrea.ceccanti@cnaf.infn.it",
@@ -20,7 +20,7 @@ setup(name='emi_ggus_mon',
       license="Apache Software License",
       package_dir={'':'src'},
       packages=['emi_ggus_mon'],
-      scripts=['src/ggus.py'])
+      scripts=['src/cnaf.py'])
       
       
       

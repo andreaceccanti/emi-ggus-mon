@@ -15,7 +15,7 @@ class FixRemindOnFieldPlugin(MessagePlugin):
         (reply, num_changes) = re.subn(r'<ns0:GHD_Remind_On>.*</ns0:GHD_Remind_On>', '', context.reply)
         context.reply = reply
 
-help_desk_url = "https://prod-ars.ggus.eu/arsys/WSDL/public/prod-ars/Grid_HelpDesk"
+help_desk_url = "https://prod-ars.ggus.eu/arsys/WSDL/public/prod-ars/GGUS"
 history_url = "https://prod-ars.ggus.eu/arsys/WSDL/public/prod-ars/Grid_History"
 
 username = "emiuser"
@@ -64,4 +64,28 @@ def get_tickets(query, start=0, limit=-1):
 def get_ticket_history(ggus_ticket):
     history_client = init_ggus_client(history_url)
     return history_client.service.OpGetTicketHist(ggus_ticket)
+
+def cnaf_tickets():
+    ggus_client = init_ggus_client(help_desk_url)
+
+    all_results = []
+    retval = []
+
+    for su in ["VOMS", "VOMS-Admin", "StoRM", "ARGUS"]:
+        su_result = ggus_client.service.TicketGetList(GHD_Responsible_Unit=su,
+                                                      GHD_Meta_Status="Open")
+        print "%s open tickets : %d" % (su, len(su_result))
+        all_results = all_results + su_result
+
+    print "Open tickets found: ", len(all_results)
+
+    for t in all_results:
+        ticket = ggus_client.service.TicketGet(t['GHD_Request_ID'])
+        retval.append(ticket)
+
+    return retval
+
+
+
+    
 
