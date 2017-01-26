@@ -4,6 +4,7 @@ Created on 17/ago/2011
 @author: andreaceccanti
 '''
 
+from suds import WebFault
 from suds.client import Client
 from suds.plugin import MessagePlugin
 import re
@@ -72,8 +73,17 @@ def cnaf_tickets():
     retval = []
 
     for su in ["VOMS", "VOMS-Admin", "StoRM", "ARGUS"]:
-        su_result = ggus_client.service.TicketGetList(GHD_Responsible_Unit=su,
-                                                      GHD_Meta_Status="Open")
+        su_result = []
+        try:
+            su_result = ggus_client.service.TicketGetList(GHD_Responsible_Unit=su,
+                                                        GHD_Meta_Status="Open")
+        except WebFault, f:
+            ## For some absurd reason the ggus web service raises an error when
+            ## a query has no results, instead of simply returning an
+            ## empty result
+            if not (f.fault is None) and repr(f.fault.faultstring) != u'ERROR (302): Entry does not exist in database; ':
+                raise f
+
         print "%s open tickets : %d" % (su, len(su_result))
         all_results = all_results + su_result
 

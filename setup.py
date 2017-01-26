@@ -21,6 +21,3 @@ setup(name='cnaf_mon',
       package_dir={'':'src'},
       packages=['emi_ggus_mon'],
       scripts=['src/cnaf.py'])
-      
-      
-      
